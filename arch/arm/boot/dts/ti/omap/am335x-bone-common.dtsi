@@ -3,6 +3,8 @@
  * Copyright (C) 2012 Texas Instruments Incorporated - https://www.ti.com/
  */
 
+#include <dt-bindings/net/ti-dp83867.h>
+
 / {
 	cpus {
 		cpu@0 {
@@ -60,6 +62,28 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 	};
+
+	ldo3_reg: fixedregulator1 {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_1v8";
+		regulator-always-on;
+	};
+
+	dcdc2_reg: fixedregulator2 {
+		/* VDD_MPU voltage limits 0.95V - 1.26V with +/-4% tolerance */
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_mpu";
+		regulator-min-microvolt = <1100000>; // <925000>;
+		regulator-max-microvolt = <1100000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	ldo4_reg: fixedregulator3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_3v3a";
+		regulator-always-on;
+	};
 };
 
 &am33xx_pinmux {
@@ -102,6 +126,7 @@
 		>;
 	};
 
+#if 0
 	cpsw_default: cpsw-default-pins {
 		pinctrl-single,pins = <
 			/* Slave 1 */
@@ -139,6 +164,41 @@
 			AM33XX_PADCONF(AM335X_PIN_MII1_RXD0, PIN_INPUT_PULLDOWN, MUX_MODE7)
 		>;
 	};
+#else
+	cpsw_default: cpsw-default-pins {
+		pinctrl-single,pins = <
+			AM33XX_PADCONF(AM335X_PIN_MII1_TX_EN, PIN_OUTPUT_PULLDOWN, MUX_MODE2)	/* mii1_txen.rgmii1_tctl */
+			AM33XX_PADCONF(AM335X_PIN_MII1_RX_DV, PIN_INPUT_PULLDOWN, MUX_MODE2)	/* mii1_rxdv.rgmii1_rctl */
+			AM33XX_PADCONF(AM335X_PIN_MII1_TX_CLK, PIN_OUTPUT_PULLDOWN, MUX_MODE2)	/* mii1_txclk.rgmii1_tclk */
+			AM33XX_PADCONF(AM335X_PIN_MII1_RX_CLK, PIN_INPUT_PULLDOWN, MUX_MODE2)	/* mii1_rxclk.rgmii1_rclk */
+			AM33XX_PADCONF(AM335X_PIN_MII1_TXD0, PIN_OUTPUT_PULLDOWN, MUX_MODE2)	/* mii1_txd0.rgmii1_td0 */
+			AM33XX_PADCONF(AM335X_PIN_MII1_TXD1, PIN_OUTPUT_PULLDOWN, MUX_MODE2)	/* mii1_txd1.rgmii1_td1 */
+			AM33XX_PADCONF(AM335X_PIN_MII1_TXD2, PIN_OUTPUT_PULLDOWN, MUX_MODE2)	/* mii1_txd2.rgmii1_td2 */
+			AM33XX_PADCONF(AM335X_PIN_MII1_TXD3, PIN_OUTPUT_PULLDOWN, MUX_MODE2)	/* mii1_txd3.rgmii1_td3 */
+			AM33XX_PADCONF(AM335X_PIN_MII1_RXD0, PIN_INPUT_PULLDOWN, MUX_MODE2)	/* mii1_rxd0.rgmii1_rd0 */
+			AM33XX_PADCONF(AM335X_PIN_MII1_RXD1, PIN_INPUT_PULLDOWN, MUX_MODE2)	/* mii1_rxd1.rgmii1_rd1 */
+			AM33XX_PADCONF(AM335X_PIN_MII1_RXD2, PIN_INPUT_PULLDOWN, MUX_MODE2)	/* mii1_rxd2.rgmii1_rd2 */
+			AM33XX_PADCONF(AM335X_PIN_MII1_RXD3, PIN_INPUT_PULLDOWN, MUX_MODE2)	/* mii1_rxd3.rgmii1_rd3 */
+		>;
+	};
+
+	cpsw_sleep: cpsw-sleep-pins {
+		pinctrl-single,pins = <
+			AM33XX_PADCONF(AM335X_PIN_MII1_TX_EN, PIN_INPUT_PULLDOWN, MUX_MODE7)
+			AM33XX_PADCONF(AM335X_PIN_MII1_RX_DV, PIN_INPUT_PULLDOWN, MUX_MODE7)
+			AM33XX_PADCONF(AM335X_PIN_MII1_TX_CLK, PIN_INPUT_PULLDOWN, MUX_MODE7)
+			AM33XX_PADCONF(AM335X_PIN_MII1_RX_CLK, PIN_INPUT_PULLDOWN, MUX_MODE7)
+			AM33XX_PADCONF(AM335X_PIN_MII1_TXD0, PIN_INPUT_PULLDOWN, MUX_MODE7)
+			AM33XX_PADCONF(AM335X_PIN_MII1_TXD1, PIN_INPUT_PULLDOWN, MUX_MODE7)
+			AM33XX_PADCONF(AM335X_PIN_MII1_TXD2, PIN_INPUT_PULLDOWN, MUX_MODE7)
+			AM33XX_PADCONF(AM335X_PIN_MII1_TXD3, PIN_INPUT_PULLDOWN, MUX_MODE7)
+			AM33XX_PADCONF(AM335X_PIN_MII1_RXD0, PIN_INPUT_PULLDOWN, MUX_MODE7)
+			AM33XX_PADCONF(AM335X_PIN_MII1_RXD1, PIN_INPUT_PULLDOWN, MUX_MODE7)
+			AM33XX_PADCONF(AM335X_PIN_MII1_RXD2, PIN_INPUT_PULLDOWN, MUX_MODE7)
+			AM33XX_PADCONF(AM335X_PIN_MII1_RXD3, PIN_INPUT_PULLDOWN, MUX_MODE7)
+		>;
+	};
+#endif
 
 	davinci_mdio_default: davinci-mdio-default-pins {
 		pinctrl-single,pins = <
@@ -197,8 +257,10 @@
 
 &usb0 {
 	dr_mode = "peripheral";
+#if 0
 	interrupts-extended = <&intc 18 &tps 0>;
 	interrupt-names = "mc", "vbus";
+#endif
 };
 
 &usb1 {
@@ -212,9 +274,11 @@
 	status = "okay";
 	clock-frequency = <400000>;
 
+#if 0
 	tps: tps@24 {
 		reg = <0x24>;
 	};
+#endif
 
 	baseboard_eeprom: baseboard_eeprom@50 {
 		compatible = "atmel,24c256";
@@ -301,7 +365,7 @@
 	};
 };
 
-
+#if 0
 /include/ "../../tps65217.dtsi"
 
 &tps {
@@ -381,11 +445,18 @@
 		};
 	};
 };
+#endif
 
 &cpsw_port1 {
+#if 0
 	phy-handle = <&ethphy0>;
 	phy-mode = "mii";
 	ti,dual-emac-pvid = <1>;
+#else
+	phy-handle = <&dp83867>;
+	phy-mode = "rgmii-id";
+	ti,dual-emac-pvid = <1>;
+#endif
 };
 
 &cpsw_port2 {
@@ -404,6 +475,7 @@
 	pinctrl-0 = <&davinci_mdio_default>;
 	pinctrl-1 = <&davinci_mdio_sleep>;
 
+#if 0
 	ethphy0: ethernet-phy@0 {
 		reg = <0>;
 		/* Support GPIO reset on revision C3 boards */
@@ -411,6 +483,16 @@
 		reset-assert-us = <300>;
 		reset-deassert-us = <13000>;
 	};
+#else
+	dp83867: ethernet-phy@0 {
+		reg = <0>;
+		ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_50_NS>;
+		ti,tx-internal-delay = <DP83867_RGMIIDCTL_2_50_NS>;
+		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_8_B_NIB>;
+		ti,min-output-impedance;
+		ti,dp83867-rxctrl-strap-quirk;
+	};
+#endif
 };
 
 &mmc1 {
