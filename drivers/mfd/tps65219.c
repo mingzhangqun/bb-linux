@@ -538,6 +538,31 @@ static int tps65219_probe(struct i2c_client *client)
 		dev_err(tps->dev, "failed to register power-off handler: %d\n", ret);
 		return ret;
 	}
+
+#if 1
+	// force 1.3v
+	int value = 0;
+	regmap_read(tps->regmap, TPS65219_REG_TI_DEV_ID, &value);
+	printk("%s,%d: [TPS65219_REG_TI_DEV_ID]=%d\n", __func__, __LINE__, value);
+	regmap_read(tps->regmap, TPS65219_REG_BUCK3_VOUT, &value);
+	printk("%s,%d: [TPS65219_REG_BUCK3_VOUT]=0x%x\n", __func__, __LINE__, value);
+	regmap_read(tps->regmap, TPS65219_REG_BUCK2_VOUT, &value);
+	printk("%s,%d: [TPS65219_REG_BUCK2_VOUT]=0x%x\n", __func__, __LINE__, value);
+	regmap_read(tps->regmap, TPS65219_REG_BUCK1_VOUT, &value);
+	printk("%s,%d: [TPS65219_REG_BUCK1_VOUT]=0x%x\n", __func__, __LINE__, value);
+
+	value = 0x5A; // unlock
+	regmap_write(tps->regmap, TPS65214_REG_LOCK, value);
+
+	value = 0x9C; // 1.3v
+	regmap_write(tps->regmap, TPS65219_REG_BUCK1_VOUT, value);
+	regmap_read(tps->regmap, TPS65219_REG_BUCK1_VOUT, &value);
+	printk("%s,%d: [TPS65219_REG_BUCK1_VOUT]=0x%x\n", __func__, __LINE__, value);
+
+	value = 0x00; // lock
+	regmap_write(tps->regmap, TPS65214_REG_LOCK, value);
+#endif
+
 	return 0;
 }
 
