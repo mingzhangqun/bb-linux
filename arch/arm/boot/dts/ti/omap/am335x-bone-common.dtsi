@@ -243,13 +243,11 @@
 		>;
 	};
 
-#if 1
 	pmic_irq_pins_default: pmic-irq-default-pins {
 		pinctrl-single,pins = <
 			AM33XX_IOPAD(AM335X_PIN_NNMI, PIN_INPUT_PULLUP | MUX_MODE0) /* (B18) nNMI.nNMI */
 		>;
 	};
-#endif
 };
 
 &uart0 {
@@ -276,7 +274,7 @@
 	status = "okay";
 	clock-frequency = <400000>;
 
-	tps: tps65219@30 {
+	tps: tps65214@30 {
 		compatible = "ti,tps65214";
 		reg = <0x30>;
 		buck1-supply = <&sys_5v>;
@@ -293,7 +291,7 @@
 
 		regulators {
 			dcdc2_reg: buck1 {
-				/* 0.912V to 1.378V */
+				/* MPU: 0.912V to 1.378V */
 				regulator-name = "vdd_mpu";
 				regulator-min-microvolt = <925000>;
 				regulator-max-microvolt = <1351500>;
@@ -302,7 +300,7 @@
 			};
 
 			dcdc3_reg: buck2 {
-				/* 0.912V to 1.144V */
+				/* CORE: 0.912V to 1.144V */
 				regulator-name = "vdd_core";
 				regulator-min-microvolt = <925000>;
 				regulator-max-microvolt = <1150000>;
@@ -311,7 +309,10 @@
 			};
 
 			dcdc1_reg: buck3 {
+				/* DDR3L: 1.283V to 1.45V */
 				regulator-name = "vdds_dpr";
+				regulator-min-microvolt = <1350000>;
+				regulator-max-microvolt = <1350000>;
 				regulator-always-on;
 			};
 
