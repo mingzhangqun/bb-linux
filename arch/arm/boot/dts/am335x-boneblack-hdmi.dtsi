@@ -68,6 +68,7 @@
 };
 
 &i2c0 {
+#if 0
 	tda19988: tda19988@70 {
 		compatible = "nxp,tda998x";
 		reg = <0x70>;
@@ -97,6 +98,44 @@
 			};
 		};
 	};
+#else
+    it66121hdmitx: hdmitx@4c {
+        compatible = "ite,it66122";
+        reg = <0x4c>;
+
+		pinctrl-names = "default";
+        pinctrl-0 = <&nxp_hdmi_bonelt_pins>;
+
+		vcn33-supply = <&vcn33_fixed>;
+		vcn18-supply = <&vcn18_fixed>;
+		vrf12-supply = <&vrf12_fixed>;
+
+		interrupt-parent = <&gpio1>;
+        interrupts = <25 IRQ_TYPE_LEVEL_LOW>;
+
+		#sound-dai-cells=<0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				/*it66121_in*/hdmi_0: endpoint {
+					bus-width = <24>;
+					remote-endpoint = <&lcdc_0>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				it66122_out: endpoint {
+					remote-endpoint = <&hdmi_connector_in>;
+				};
+			};
+		};
+	};
+#endif
 };
 
 &mcasp0	{
@@ -140,7 +179,40 @@
 		};
 
 		simple-audio-card,codec {
-			sound-dai = <&tda19988>;
+			//sound-dai = <&tda19988>;
+			sound-dai = <&it66121hdmitx>;
 		};
+	};
+
+	hdmi0: connector-hdmi {
+		compatible = "hdmi-connector";
+		label = "hdmi";
+		type = "d";
+		port {
+			hdmi_connector_in: endpoint {
+				remote-endpoint = <&it66122_out>;
+			};
+		};
+	};
+
+	vcn33_fixed: fixed-reg1 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcn33_fixed";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
+
+	vcn18_fixed: fixed-reg2 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcn18_fixed";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+
+	vrf12_fixed: fixed-reg3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vrf12_fixed";
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
 	};
 };
