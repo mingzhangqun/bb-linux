@@ -734,6 +734,7 @@ static int it66121_bridge_attach(struct drm_bridge *bridge,
 
 	/* HACK For some part of missing hotplug somewhere.. */
 	it66121_bridge_hpd_enable(bridge);
+	msleep(50);
 
 	return 0;
 }
