@@ -113,6 +113,8 @@
 		vcn18-supply = <&vcn18_fixed>;
 		vrf12-supply = <&vrf12_fixed>;
 
+		reset-gpios = <&gpio1 9 GPIO_ACTIVE_LOW>;
+
 		interrupt-parent = <&gpio1>;
         interrupts = <25 IRQ_TYPE_EDGE_FALLING>;
 
