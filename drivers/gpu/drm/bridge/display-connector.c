@@ -209,6 +209,7 @@ static int display_connector_probe(struct platform_device *pdev)
 	const char *label = NULL;
 	int ret;
 
+	printk("%s,%d", __func__, __LINE__);
 	conn = devm_kzalloc(&pdev->dev, sizeof(*conn), GFP_KERNEL);
 	if (!conn)
 		return -ENOMEM;
@@ -216,6 +217,7 @@ static int display_connector_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, conn);
 
 	type = (uintptr_t)of_device_get_match_data(&pdev->dev);
+	printk("%s,%d: type=%d", __func__, __LINE__, type);
 
 	/* Get the exact connector type. */
 	switch (type) {
@@ -294,6 +296,7 @@ static int display_connector_probe(struct platform_device *pdev)
 	} else {
 		conn->hpd_irq = -EINVAL;
 	}
+	printk("%s,%d: conn->hpd_irq=%d", __func__, __LINE__, conn->hpd_irq);
 
 	if (conn->hpd_irq >= 0) {
 		ret = devm_request_threaded_irq(&pdev->dev, conn->hpd_irq,
@@ -347,12 +350,15 @@ static int display_connector_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "Couldn't get ddc-en gpio\n");
 			return PTR_ERR(conn->ddc_en);
 		}
+		printk("%s,%d: conn->ddc_en=%p\n", __func__, __LINE__, conn->ddc_en);
 
 		ret = display_connector_get_supply(pdev, conn, "hdmi-pwr");
+		printk("%s,%d: ret=%d\n", __func__, __LINE__, ret);
 		if (ret < 0)
 			return dev_err_probe(&pdev->dev, ret, "failed to get HDMI +5V Power regulator\n");
 	}
 
+	printk("%s,%d: conn->supply=%p\n", __func__, __LINE__, conn->supply);
 	if (conn->supply) {
 		ret = regulator_enable(conn->supply);
 		if (ret) {
@@ -372,7 +378,8 @@ static int display_connector_probe(struct platform_device *pdev)
 	if (conn->hpd_irq >= 0)
 		conn->bridge.ops |= DRM_BRIDGE_OP_HPD;
 
-	dev_dbg(&pdev->dev,
+	// dev_dbg(&pdev->dev,
+	printk(
 		"Found %s display connector '%s' %s DDC bus and %s HPD GPIO (ops 0x%x)\n",
 		drm_get_connector_type_name(conn->bridge.type),
 		label ? label : "<unlabelled>",

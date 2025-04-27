@@ -155,10 +155,16 @@ static struct component *find_component(struct aggregate_device *adev,
 {
 	struct component *c;
 
+	printk("%s,%d: adev=0x%p, 0x%p\n", __func__, __LINE__, adev, adev->parent);
 	list_for_each_entry(c, &component_list, node) {
+		printk("%s,%d: c->dev=0x%p, c->dev->parent=0x%p\n", 
+			__func__, __LINE__, c->dev, c->dev->parent);
 		if (c->adev && c->adev != adev)
 			continue;
 
+		printk("%s,%d: mc->compare=0x%p\n", __func__, __LINE__, mc->compare);
+		printk("%s,%d: c->dev=0x%p, mc->data=0x%p\n", 
+			__func__, __LINE__, c->dev, mc->data);
 		if (mc->compare && mc->compare(c->dev, mc->data))
 			return c;
 
@@ -167,6 +173,7 @@ static struct component *find_component(struct aggregate_device *adev,
 			return c;
 	}
 
+	printk("%s,%d\n", __func__, __LINE__);
 	return NULL;
 }
 
@@ -180,22 +187,33 @@ static int find_components(struct aggregate_device *adev)
 	 * Scan the array of match functions and attach
 	 * any components which are found to this adev.
 	 */
+	printk("%s,%d: match->num=%d, adev->parent\n", 
+		__func__, __LINE__, match->num, adev->parent);
 	for (i = 0; i < match->num; i++) {
 		struct component_match_array *mc = &match->compare[i];
 		struct component *c;
 
-		dev_dbg(adev->parent, "Looking for component %zu\n", i);
+		printk("%s,%d:" "Looking for component %zu\n",
+			__func__, __LINE__, i);
 
+		printk("%s,%d:" "compare=0x%p\n", __func__, __LINE__, 
+			match->compare[i].compare);
+		printk("%s,%d:" "component=0x%p\n", __func__, __LINE__, 
+			match->compare[i].component);
 		if (match->compare[i].component)
 			continue;
 
+		printk("%s,%d:" "adev=0x%p, adev->parent=0x%p\n",  __func__, __LINE__,
+			adev, adev->parent);
 		c = find_component(adev, mc);
 		if (!c) {
 			ret = -ENXIO;
 			break;
 		}
 
-		dev_dbg(adev->parent, "found component %s, duplicate %u\n",
+		// dev_dbg(adev->parent, "found component %s, duplicate %u\n",
+			// dev_name(c->dev), !!c->adev);
+		printk("%s,%d:" "found component %s, duplicate %u\n", __func__, __LINE__,
 			dev_name(c->dev), !!c->adev);
 
 		/* Attach this component to the adev */
@@ -203,6 +221,8 @@ static int find_components(struct aggregate_device *adev)
 		match->compare[i].component = c;
 		c->adev = adev;
 	}
+
+	printk("%s,%d: ret=%d\n", __func__, __LINE__, ret);
 	return ret;
 }
 
@@ -229,15 +249,19 @@ static int try_to_bring_up_aggregate_device(struct aggregate_device *adev,
 {
 	int ret;
 
-	dev_dbg(adev->parent, "trying to bring up adev\n");
-
+	printk("%s,%d: adev=0x%p, adev->parent=0x%p\n", __func__, __LINE__,
+		adev, adev->parent);
+	printk("%s,%d: %pOF\n", __func__, __LINE__, adev->parent->of_node);
 	if (find_components(adev)) {
 		dev_dbg(adev->parent, "master has incomplete components\n");
 		return 0;
 	}
 
 	if (component && component->adev != adev) {
-		dev_dbg(adev->parent, "master is not for this component (%s)\n",
+		// dev_dbg(adev->parent, "master is not for this component (%s)\n",
+			// dev_name(component->dev));
+		printk("%s,%d\n" "master is not for this component (%s)\n",
+			__func__, __LINE__,
 			dev_name(component->dev));
 		return 0;
 	}
@@ -247,15 +271,18 @@ static int try_to_bring_up_aggregate_device(struct aggregate_device *adev,
 
 	/* Found all components */
 	ret = adev->ops->bind(adev->parent);
+	printk("%s,%d: ret=%d\n", __func__, __LINE__, ret);
 	if (ret < 0) {
 		devres_release_group(adev->parent, NULL);
 		if (ret != -EPROBE_DEFER)
 			dev_info(adev->parent, "adev bind failed: %d\n", ret);
+			printk("%s,%d\n" "adev bind failed: %d\n", __func__, __LINE__, ret);
 		return ret;
 	}
 
 	devres_close_group(adev->parent, NULL);
 	adev->bound = true;
+	printk("%s,%d\n", __func__, __LINE__);
 	return 1;
 }
 
@@ -264,7 +291,10 @@ static int try_to_bring_up_masters(struct component *component)
 	struct aggregate_device *adev;
 	int ret = 0;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	list_for_each_entry(adev, &aggregate_devices, node) {
+		printk("%s,%d\n" "adev=0x%p, adev->parent=0x%p, bound=%d\n", __func__, __LINE__,
+			adev, adev->parent, adev->bound);
 		if (!adev->bound) {
 			ret = try_to_bring_up_aggregate_device(adev, component);
 			if (ret != 0)
@@ -277,6 +307,7 @@ static int try_to_bring_up_masters(struct component *component)
 
 static void take_down_aggregate_device(struct aggregate_device *adev)
 {
+	printk("%s,%d\n", __func__, __LINE__);
 	if (adev->bound) {
 		adev->ops->unbind(adev->parent);
 		devres_release_group(adev->parent, adev);
@@ -391,6 +422,7 @@ static void __component_match_add(struct device *parent,
 		return;
 
 	if (!match) {
+		printk("%s,%d\n", __func__, __LINE__);
 		match = devres_alloc(devm_component_match_release,
 				     sizeof(*match), GFP_KERNEL);
 		if (!match) {
@@ -402,6 +434,8 @@ static void __component_match_add(struct device *parent,
 
 		*matchptr = match;
 	}
+	printk("%s,%d: match=> num=%d, alloc=%d\n", __func__, __LINE__, 
+		match->num, match->alloc);
 
 	if (match->num == match->alloc) {
 		size_t new_size = match->alloc + 16;
@@ -516,8 +550,11 @@ int component_master_add_with_match(struct device *parent,
 	struct aggregate_device *adev;
 	int ret;
 
+	printk("\n%s,%d\n", __func__, __LINE__);
+
 	/* Reallocate the match array for its true size */
 	ret = component_match_realloc(match, match->num);
+	printk("%s,%d: ret=%d\n", __func__, __LINE__, ret);
 	if (ret)
 		return ret;
 
@@ -528,19 +565,22 @@ int component_master_add_with_match(struct device *parent,
 	adev->parent = parent;
 	adev->ops = ops;
 	adev->match = match;
+	printk("%s,%d: adev->parent=0x%p\n", __func__, __LINE__, parent);
 
 	component_debugfs_add(adev);
 	/* Add to the list of available aggregate devices. */
 	mutex_lock(&component_mutex);
 	list_add(&adev->node, &aggregate_devices);
 
+	printk("%s,%d: ret=%d\n", __func__, __LINE__, ret);
 	ret = try_to_bring_up_aggregate_device(adev, NULL);
-
+	printk("%s,%d: ret=%d\n", __func__, __LINE__, ret);
 	if (ret < 0)
 		free_aggregate_device(adev);
 
 	mutex_unlock(&component_mutex);
 
+	printk("%s,%d: ret=%d\n\n", __func__, __LINE__, ret);
 	return ret < 0 ? ret : 0;
 }
 EXPORT_SYMBOL_GPL(component_master_add_with_match);
@@ -652,7 +692,10 @@ static int component_bind(struct component *component, struct aggregate_device *
 		return -ENOMEM;
 	}
 
-	dev_dbg(adev->parent, "binding %s (ops %ps)\n",
+	// dev_dbg(adev->parent, "binding %s (ops %ps)\n",
+		// dev_name(component->dev), component->ops);
+	
+	printk("binding %s (ops %ps)\n",
 		dev_name(component->dev), component->ops);
 
 	ret = component->ops->bind(component->dev, adev->parent, data);
@@ -698,6 +741,7 @@ int component_bind_all(struct device *parent, void *data)
 	size_t i;
 	int ret = 0;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	WARN_ON(!mutex_is_locked(&component_mutex));
 
 	adev = __aggregate_find(parent, NULL);
@@ -705,13 +749,15 @@ int component_bind_all(struct device *parent, void *data)
 		return -EINVAL;
 
 	/* Bind components in match order */
-	for (i = 0; i < adev->match->num; i++)
+	for (i = 0; i < adev->match->num; i++) {
+		printk("%s,%d: i=%d, duplicate=%d\n", __func__, __LINE__, i, adev->match->compare[i].duplicate);
 		if (!adev->match->compare[i].duplicate) {
 			c = adev->match->compare[i].component;
 			ret = component_bind(c, adev, data);
 			if (ret)
 				break;
 		}
+	}
 
 	if (ret != 0) {
 		for (; i > 0; i--)
@@ -731,6 +777,7 @@ static int __component_add(struct device *dev, const struct component_ops *ops,
 	struct component *component;
 	int ret;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	component = kzalloc(sizeof(*component), GFP_KERNEL);
 	if (!component)
 		return -ENOMEM;
@@ -740,6 +787,7 @@ static int __component_add(struct device *dev, const struct component_ops *ops,
 	component->subcomponent = subcomponent;
 
 	dev_dbg(dev, "adding component (ops %ps)\n", ops);
+	printk("%s,%d:" "adding component (ops %ps)\n", __func__, __LINE__, ops);
 
 	mutex_lock(&component_mutex);
 	list_add_tail(&component->node, &component_list);
@@ -782,6 +830,8 @@ int component_add_typed(struct device *dev, const struct component_ops *ops,
 	if (WARN_ON(subcomponent == 0))
 		return -EINVAL;
 
+	printk("%s,%d: dev=0x%p, ops=0x%p\n", __func__, __LINE__, dev, ops);
+	printk("%s,%d: dev->of_node=%pOF\n", __func__, __LINE__, dev->of_node);
 	return __component_add(dev, ops, subcomponent);
 }
 EXPORT_SYMBOL_GPL(component_add_typed);
@@ -803,6 +853,8 @@ EXPORT_SYMBOL_GPL(component_add_typed);
  */
 int component_add(struct device *dev, const struct component_ops *ops)
 {
+	printk("%s,%d: dev=0x%p, ops=0x%p\n", __func__, __LINE__, dev, ops);
+	printk("%s,%d: dev->of_node=%pOF\n", __func__, __LINE__, dev->of_node);
 	return __component_add(dev, ops, 0);
 }
 EXPORT_SYMBOL_GPL(component_add);

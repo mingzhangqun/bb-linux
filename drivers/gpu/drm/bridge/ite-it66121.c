@@ -29,6 +29,8 @@
 
 #include <sound/hdmi-codec.h>
 
+#define DBG(fmt, ...)	printk("%s,%d: " fmt"\n", __func__, __LINE__, ##__VA_ARGS__)
+
 #define IT66121_VENDOR_ID0_REG			0x00
 #define IT66121_VENDOR_ID1_REG			0x01
 #define IT66121_DEVICE_ID0_REG			0x02
@@ -338,6 +340,7 @@ static const struct regmap_config it66121_regmap_config = {
 
 static void it66121_hw_reset(struct it66121_ctx *ctx)
 {
+	DBG("");
 	gpiod_set_value(ctx->gpio_reset, 1);
 	msleep(20);
 	gpiod_set_value(ctx->gpio_reset, 0);
@@ -579,9 +582,11 @@ static bool it66121_is_hpd_detect(struct it66121_ctx *ctx)
 {
 	int val;
 
+	DBG("");
 	if (regmap_read(ctx->regmap, IT66121_SYS_STATUS_REG, &val))
 		return false;
 
+	DBG("val=0x%x(%d)", val, (int)(val & IT66121_SYS_STATUS_HPDETECT));
 	return val & IT66121_SYS_STATUS_HPDETECT;
 }
 
@@ -591,16 +596,19 @@ static int it66121_bridge_attach(struct drm_bridge *bridge,
 	struct it66121_ctx *ctx = container_of(bridge, struct it66121_ctx, bridge);
 	int ret;
 
+	DBG("Start: flags=0x%x", flags);
 	if (!(flags & DRM_BRIDGE_ATTACH_NO_CONNECTOR))
 		return -EINVAL;
 
 	ret = drm_bridge_attach(bridge->encoder, ctx->next_bridge, bridge, flags);
+	DBG("ret=%d", ret);
 	if (ret)
 		return ret;
 
 	if (ctx->info->id == ID_IT66121) {
 		ret = regmap_write_bits(ctx->regmap, IT66121_CLK_BANK_REG,
 					IT66121_CLK_BANK_PWROFF_RCLK, 0);
+		DBG("ret=%d", ret);
 		if (ret)
 			return ret;
 	}
@@ -648,6 +656,8 @@ static int it66121_bridge_attach(struct drm_bridge *bridge,
 
 	/* Per programming manual, sleep here for bridge to settle */
 	msleep(50);
+
+	DBG("End");
 
 	return 0;
 }
@@ -927,6 +937,7 @@ static irqreturn_t it66121_irq_threaded_handler(int irq, void *dev_id)
 	enum drm_connector_status status;
 	bool event = false;
 
+	DBG();
 	mutex_lock(&ctx->lock);
 
 	ret = regmap_read(ctx->regmap, IT66121_SYS_STATUS_REG, &val);
@@ -956,6 +967,7 @@ static irqreturn_t it66121_irq_threaded_handler(int irq, void *dev_id)
 unlock:
 	mutex_unlock(&ctx->lock);
 
+	DBG("event=%d", event);
 	if (event)
 		drm_bridge_hpd_notify(&ctx->bridge, status);
 
@@ -1510,6 +1522,7 @@ static int it66121_probe(struct i2c_client *client)
 	struct it66121_ctx *ctx;
 	struct device *dev = &client->dev;
 
+	DBG("Start");
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		dev_err(dev, "I2C check functionality failed.\n");
 		return -ENXIO;
@@ -1522,6 +1535,7 @@ static int it66121_probe(struct i2c_client *client)
 	ep = of_graph_get_endpoint_by_regs(dev->of_node, 0, 0);
 	if (!ep)
 		return -EINVAL;
+	DBG("ep=%pOF", ep);
 
 	ctx->dev = dev;
 	ctx->client = client;
@@ -1538,6 +1552,7 @@ static int it66121_probe(struct i2c_client *client)
 		dev_err(ctx->dev, "The endpoint is unconnected\n");
 		return -EINVAL;
 	}
+	DBG("%s,%d: Found remote endpoint: %pOF", __func__, __LINE__, ep);
 
 	ctx->next_bridge = of_drm_find_bridge(ep);
 	of_node_put(ep);
@@ -1545,6 +1560,7 @@ static int it66121_probe(struct i2c_client *client)
 		dev_dbg(ctx->dev, "Next bridge not found, deferring probe\n");
 		return -EPROBE_DEFER;
 	}
+	DBG("%s,%d: Found next bridge: %pOF", __func__, __LINE__, ctx->next_bridge->of_node);
 
 	i2c_set_clientdata(client, ctx);
 	mutex_init(&ctx->lock);
@@ -1556,6 +1572,9 @@ static int it66121_probe(struct i2c_client *client)
 		return ret;
 	}
 
+	ctx->gpio_reset = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(ctx->gpio_reset))
+		return dev_err_probe(dev, PTR_ERR(ctx->gpio_reset), "Failed to get GPIO 'reset'\n");
 	it66121_hw_reset(ctx);
 
 	ctx->regmap = devm_regmap_init_i2c(client, &it66121_regmap_config);
@@ -1571,6 +1590,8 @@ static int it66121_probe(struct i2c_client *client)
 	revision_id = FIELD_GET(IT66121_REVISION_MASK, device_ids[1]);
 	device_ids[1] &= IT66121_DEVICE_ID1_MASK;
 
+	DBG("VID: %04x, PID: %04x", vendor_ids[1] << 8 | vendor_ids[0],
+			device_ids[1] << 8 | device_ids[0]);
 	if ((vendor_ids[1] << 8 | vendor_ids[0]) != ctx->info->vid ||
 	    (device_ids[1] << 8 | device_ids[0]) != ctx->info->pid) {
 		return -ENODEV;
@@ -1598,6 +1619,7 @@ static int it66121_probe(struct i2c_client *client)
 	drm_bridge_add(&ctx->bridge);
 
 	dev_info(ctx->dev, "IT66121 revision %d probed\n", revision_id);
+	DBG("End: IT66121 revision %d probed", revision_id);
 
 	return 0;
 }

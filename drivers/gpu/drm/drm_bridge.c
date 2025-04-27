@@ -1264,6 +1264,7 @@ EXPORT_SYMBOL_GPL(drm_bridge_hpd_disable);
 void drm_bridge_hpd_notify(struct drm_bridge *bridge,
 			   enum drm_connector_status status)
 {
+	printk("%s,%d: status=%d, hpd_cb=%p\n", __func__, __LINE__, status, bridge->hpd_cb);
 	mutex_lock(&bridge->hpd_mutex);
 	if (bridge->hpd_cb)
 		bridge->hpd_cb(bridge->hpd_data, status);
@@ -1281,11 +1282,18 @@ EXPORT_SYMBOL_GPL(drm_bridge_hpd_notify);
  * RETURNS:
  * drm_bridge control struct on success, NULL on failure
  */
+#include <linux/of.h>
 struct drm_bridge *of_drm_find_bridge(struct device_node *np)
 {
 	struct drm_bridge *bridge;
 
 	mutex_lock(&bridge_lock);
+
+	printk("%s,%d: To find %pOF\n", __func__, __LINE__, np);
+	printk("%s,%d: bridge_list=%p\n", __func__, __LINE__, &bridge_list);
+	list_for_each_entry(bridge, &bridge_list, list) {
+		printk("%s,%d: %pOF\n", __func__, __LINE__, bridge->of_node);
+	}
 
 	list_for_each_entry(bridge, &bridge_list, list) {
 		if (bridge->of_node == np) {

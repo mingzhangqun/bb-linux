@@ -157,6 +157,9 @@ err_encoder_cleanup:
 
 static int dev_match_of(struct device *dev, void *data)
 {
+	printk("%s,%d: dev->parent=0x%p, %pOF\n", 
+		__func__, __LINE__, dev->parent, dev->parent->of_node);
+	printk(KERN_INFO "dev->of_node=0x%p, data=0x%p\n", dev->of_node, data);
 	return dev->of_node == data;
 }
 
@@ -165,16 +168,19 @@ int tilcdc_get_external_components(struct device *dev,
 {
 	struct device_node *node;
 
+	printk("%s,%d: dev->of_node=%pOF\n", __func__, __LINE__, dev->of_node);
 	node = of_graph_get_remote_node(dev->of_node, 0, 0);
-
+	printk("%s,%d: node=%pOF\n", __func__, __LINE__, node);
 	if (!of_device_is_compatible(node, "nxp,tda998x")
 		&& !of_device_is_compatible(node, "ite,it66122")) {
 		of_node_put(node);
 		return 0;
 	}
 
-	if (match)
+	if (match) {
+		printk(KERN_INFO "dev_match_of=0x%p\n", dev_match_of);
 		drm_of_component_match_add(dev, match, dev_match_of, node);
+	}
 	of_node_put(node);
 	return 1;
 }

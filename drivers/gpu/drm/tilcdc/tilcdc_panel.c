@@ -309,6 +309,8 @@ static int panel_probe(struct platform_device *pdev)
 	struct tilcdc_module *mod;
 	int ret;
 
+	printk("%s,%d: Start", __func__, __LINE__);
+
 	/* bail out early if no DT data: */
 	if (!node) {
 		dev_err(&pdev->dev, "device-tree data is missing\n");
@@ -353,6 +355,8 @@ static int panel_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto fail_timings;
 	}
+
+	printk("%s,%d: End", __func__, __LINE__);
 
 	return 0;
 

@@ -31,6 +31,9 @@
 #include "tilcdc_panel.h"
 #include "tilcdc_regs.h"
 
+#undef DBG
+#define DBG(fmt, ...)	printk("%s,%d: " fmt"\n", __func__, __LINE__, ##__VA_ARGS__)
+
 static LIST_HEAD(module_list);
 
 static const u32 tilcdc_rev1_formats[] = { DRM_FORMAT_RGB565 };
@@ -202,6 +205,7 @@ static int tilcdc_init(const struct drm_driver *ddrv, struct device *dev)
 	u32 bpp = 0;
 	int ret;
 
+	DBG("");
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
@@ -311,6 +315,7 @@ static int tilcdc_init(const struct drm_driver *ddrv, struct device *dev)
 	DBG("Maximum Pixel Clock Value %dKHz", priv->max_pixelclock);
 
 	ret = tilcdc_crtc_create(ddev);
+	DBG("ret=%d", ret);
 	if (ret < 0) {
 		dev_err(dev, "failed to create crtc\n");
 		goto init_failed;
@@ -329,15 +334,18 @@ static int tilcdc_init(const struct drm_driver *ddrv, struct device *dev)
 #endif
 
 	if (priv->is_componentized) {
+		DBG("");
 		ret = component_bind_all(dev, ddev);
 		if (ret < 0)
 			goto init_failed;
 
 		ret = tilcdc_add_component_encoder(ddev);
+		DBG("ret=%d", ret);
 		if (ret < 0)
 			goto init_failed;
 	} else {
 		ret = tilcdc_attach_external_device(ddev);
+		DBG("ret=%d", ret);
 		if (ret)
 			goto init_failed;
 	}
@@ -519,6 +527,7 @@ static DEFINE_SIMPLE_DEV_PM_OPS(tilcdc_pm_ops,
  */
 static int tilcdc_bind(struct device *dev)
 {
+	DBG("");
 	return tilcdc_init(&tilcdc_driver, dev);
 }
 
@@ -526,6 +535,7 @@ static void tilcdc_unbind(struct device *dev)
 {
 	struct drm_device *ddev = dev_get_drvdata(dev);
 
+	DBG("");
 	/* Check if a subcomponent has already triggered the unloading. */
 	if (!ddev->dev_private)
 		return;
@@ -544,21 +554,27 @@ static int tilcdc_pdev_probe(struct platform_device *pdev)
 	struct component_match *match = NULL;
 	int ret;
 
+	DBG("name=%s", pdev->name);
+	DBG("pdev->dev.of_node=0x%p", pdev->dev.of_node);
 	/* bail out early if no DT data: */
 	if (!pdev->dev.of_node) {
 		dev_err(&pdev->dev, "device-tree data is missing\n");
 		return -ENXIO;
 	}
+	printk("pdev->dev.of_node=%pOF\n", pdev->dev.of_node);
 
 	ret = tilcdc_get_external_components(&pdev->dev, &match);
+	DBG("ret=%d", ret);
 	if (ret < 0)
 		return ret;
 	else if (ret == 0)
 		return tilcdc_init(&tilcdc_driver, &pdev->dev);
-	else
+	else {
+		DBG("ret=%d, &pdev->dev=0x%p, parent=0x%p", ret, &pdev->dev, pdev->dev.parent);
 		return component_master_add_with_match(&pdev->dev,
 						       &tilcdc_comp_ops,
 						       match);
+	}
 }
 
 static void tilcdc_pdev_remove(struct platform_device *pdev)
