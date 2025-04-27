@@ -22,6 +22,7 @@
 
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_bridge.h>
+#include <drm/drm_bridge_connector.h>
 #include <drm/drm_edid.h>
 #include <drm/drm_modes.h>
 #include <drm/drm_print.h>
@@ -341,6 +342,7 @@ static void it66121_hw_reset(struct it66121_ctx *ctx)
 	gpiod_set_value(ctx->gpio_reset, 1);
 	msleep(20);
 	gpiod_set_value(ctx->gpio_reset, 0);
+	msleep(20); // wait for stable
 }
 
 static inline int it66121_preamble_ddc(struct it66121_ctx *ctx)
@@ -589,12 +591,25 @@ static int it66121_bridge_attach(struct drm_bridge *bridge,
 				 enum drm_bridge_attach_flags flags)
 {
 	struct it66121_ctx *ctx = container_of(bridge, struct it66121_ctx, bridge);
+	struct drm_connector *connector;
 	int ret;
 
-	if (!(flags & DRM_BRIDGE_ATTACH_NO_CONNECTOR))
+	if (flags & DRM_BRIDGE_ATTACH_NO_CONNECTOR) {
+		DRM_ERROR("DRM_BRIDGE_ATTACH_NO_CONNECTOR mode is not supported.\n");
 		return -EINVAL;
+	}
 
-	ret = drm_bridge_attach(bridge->encoder, ctx->next_bridge, bridge, flags);
+	connector = drm_bridge_connector_init(bridge->dev, bridge->encoder);
+	if (IS_ERR(connector)) {
+		ret = PTR_ERR(connector);
+		dev_err(ctx->dev, "failed to initialize bridge connector: %d\n",
+			ret);
+		return ret;
+	}
+	drm_connector_attach_encoder(connector, bridge->encoder);
+
+	ret = drm_bridge_attach(bridge->encoder, ctx->next_bridge, bridge,
+		flags | DRM_BRIDGE_ATTACH_NO_CONNECTOR);
 	if (ret)
 		return ret;
 
@@ -1556,6 +1571,9 @@ static int it66121_probe(struct i2c_client *client)
 		return ret;
 	}
 
+	ctx->gpio_reset = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(ctx->gpio_reset))
+		return dev_err_probe(dev, PTR_ERR(ctx->gpio_reset), "Failed to get GPIO 'reset'\n");
 	it66121_hw_reset(ctx);
 
 	ctx->regmap = devm_regmap_init_i2c(client, &it66121_regmap_config);
