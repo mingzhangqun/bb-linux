@@ -205,7 +205,7 @@ static int tilcdc_init(const struct drm_driver *ddrv, struct device *dev)
 	u32 bpp = 0;
 	int ret;
 
-	DBG("");
+	DBG("start");
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
@@ -220,6 +220,7 @@ static int tilcdc_init(const struct drm_driver *ddrv, struct device *dev)
 
 	priv->is_componentized =
 		tilcdc_get_external_components(dev, NULL) > 0;
+	DBG("is_componentized: %d", priv->is_componentized);
 
 	priv->wq = alloc_ordered_workqueue("tilcdc", 0);
 	if (!priv->wq) {
@@ -385,12 +386,14 @@ static int tilcdc_init(const struct drm_driver *ddrv, struct device *dev)
 
 	drm_client_setup_with_color_mode(ddev, bpp);
 
+	DBG("end");
 	return 0;
 
 init_failed:
 	tilcdc_fini(ddev);
 	platform_set_drvdata(pdev, NULL);
 
+	DBG("failed ret=%d", ret);
 	return ret;
 }
 

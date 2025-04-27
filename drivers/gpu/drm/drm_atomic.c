@@ -978,6 +978,7 @@ drm_atomic_get_new_connector_for_encoder(const struct drm_atomic_state *state,
 	struct drm_connector *connector;
 	unsigned int i;
 
+	printk("%s,%d:\n", __func__, __LINE__);
 	for_each_new_connector_in_state(state, connector, conn_state, i) {
 		if (conn_state->best_encoder == encoder)
 			return connector;

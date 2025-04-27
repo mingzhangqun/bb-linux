@@ -333,6 +333,7 @@ static void drm_connector_add(struct drm_connector *connector)
 	struct drm_device *dev = connector->dev;
 	struct drm_mode_config *config = &dev->mode_config;
 
+	printk("%s,%d:\n", __func__, __LINE__);
 	if (drm_WARN_ON(dev, !list_empty(&connector->head)))
 		return;
 
@@ -340,6 +341,7 @@ static void drm_connector_add(struct drm_connector *connector)
 	list_add_tail(&connector->head, &config->connector_list);
 	config->num_connector++;
 	spin_unlock_irq(&config->connector_list_lock);
+	printk("%s,%d: config->num_connector=%d\n", __func__, __LINE__, config->num_connector);
 }
 
 static void drm_connector_remove(struct drm_connector *connector)
@@ -367,11 +369,14 @@ static int drm_connector_init_and_add(struct drm_device *dev,
 {
 	int ret;
 
+	printk("%s,%d:connector_type=%d\n", __func__, __LINE__, connector_type);
 	ret = drm_connector_init_only(dev, connector, funcs, connector_type, ddc);
+	printk("%s,%d:ret=%d\n", __func__, __LINE__, ret);
 	if (ret)
 		return ret;
 
 	drm_connector_add(connector);
+	printk("%s,%d: End\n", __func__, __LINE__);
 
 	return 0;
 }
@@ -402,9 +407,11 @@ int drm_connector_init(struct drm_device *dev,
 		       const struct drm_connector_funcs *funcs,
 		       int connector_type)
 {
+	printk("%s,%d\n", __func__, __LINE__);
 	if (drm_WARN_ON(dev, !(funcs && funcs->destroy)))
 		return -EINVAL;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	return drm_connector_init_and_add(dev, connector, funcs, connector_type, NULL);
 }
 EXPORT_SYMBOL(drm_connector_init);
@@ -480,9 +487,11 @@ int drm_connector_init_with_ddc(struct drm_device *dev,
 				int connector_type,
 				struct i2c_adapter *ddc)
 {
+	printk("%s,%d\n", __func__, __LINE__);
 	if (drm_WARN_ON(dev, !(funcs && funcs->destroy)))
 		return -EINVAL;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	return drm_connector_init_and_add(dev, connector, funcs, connector_type, ddc);
 }
 EXPORT_SYMBOL(drm_connector_init_with_ddc);
@@ -524,15 +533,19 @@ int drmm_connector_init(struct drm_device *dev,
 {
 	int ret;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	if (drm_WARN_ON(dev, funcs && funcs->destroy))
 		return -EINVAL;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	ret = drm_connector_init_and_add(dev, connector, funcs, connector_type, ddc);
 	if (ret)
 		return ret;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	ret = drmm_add_action_or_reset(dev, drm_connector_cleanup_action,
 				       connector);
+	printk("%s,%d: ret=%d\n", __func__, __LINE__, ret);
 	if (ret)
 		return ret;
 
@@ -790,6 +803,7 @@ int drm_connector_register(struct drm_connector *connector)
 {
 	int ret = 0;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	if (!connector->dev->registered)
 		return 0;
 
@@ -837,6 +851,7 @@ err_debugfs:
 	drm_sysfs_connector_remove(connector);
 unlock:
 	mutex_unlock(&connector->mutex);
+	printk("%s,%d: End\n", __func__, __LINE__);
 	return ret;
 }
 EXPORT_SYMBOL(drm_connector_register);
@@ -857,10 +872,13 @@ EXPORT_SYMBOL(drm_connector_register);
  */
 int drm_connector_dynamic_register(struct drm_connector *connector)
 {
+	printk("%s,%d: connector->name=%s\n", __func__, __LINE__, connector->name);
+
 	/* Was the connector inited already? */
 	if (WARN_ON(!(connector->funcs && connector->funcs->destroy)))
 		return -EINVAL;
 
+	printk("%s,%d: \n", __func__, __LINE__);
 	drm_connector_add(connector);
 
 	return drm_connector_register(connector);

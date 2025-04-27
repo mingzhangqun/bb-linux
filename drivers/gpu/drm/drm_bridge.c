@@ -309,9 +309,13 @@ int drm_bridge_attach(struct drm_encoder *encoder, struct drm_bridge *bridge,
 {
 	int ret;
 
+	printk("%s,%d: encoder=0x%p, bridge=0x%p\n", __func__, __LINE__,
+		encoder, bridge);
 	if (!encoder || !bridge)
 		return -EINVAL;
 
+	printk("%s,%d: previous=0x%p, flags=%d\n", __func__, __LINE__,
+		previous, flags);
 	if (previous && (!previous->dev || previous->encoder != encoder))
 		return -EINVAL;
 

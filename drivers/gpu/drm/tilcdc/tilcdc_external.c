@@ -46,7 +46,9 @@ struct drm_connector *tilcdc_encoder_find_connector(struct drm_device *ddev,
 {
 	struct drm_connector *connector;
 
+	printk("%s,%d: Start\n", __func__, __LINE__);
 	list_for_each_entry(connector, &ddev->mode_config.connector_list, head) {
+		printk("%s,%d: connector->name=%s\n", __func__, __LINE__, connector->name);
 		if (drm_connector_has_possible_encoder(connector, encoder))
 			return connector;
 	}
@@ -92,9 +94,11 @@ int tilcdc_attach_bridge(struct drm_device *ddev, struct drm_bridge *bridge)
 	struct tilcdc_drm_private *priv = ddev->dev_private;
 	int ret;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	priv->external_encoder->possible_crtcs = BIT(0);
 
-	ret = drm_bridge_attach(priv->external_encoder, bridge, NULL, 0);
+	ret = drm_bridge_attach(priv->external_encoder, bridge, NULL, DRM_BRIDGE_ATTACH_NO_CONNECTOR);
+	printk("%s,%d: ret=%d\n", __func__, __LINE__, ret);
 	if (ret)
 		return ret;
 
@@ -102,6 +106,8 @@ int tilcdc_attach_bridge(struct drm_device *ddev, struct drm_bridge *bridge)
 
 	priv->external_connector =
 		tilcdc_encoder_find_connector(ddev, priv->external_encoder);
+	printk("%s,%d: priv->external_connector=0x%p\n", __func__, __LINE__,
+		priv->external_connector);
 	if (!priv->external_connector)
 		return -ENODEV;
 
@@ -115,8 +121,10 @@ int tilcdc_attach_external_device(struct drm_device *ddev)
 	struct drm_panel *panel;
 	int ret;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	ret = drm_of_find_panel_or_bridge(ddev->dev->of_node, 0, 0,
 					  &panel, &bridge);
+	printk("%s,%d: ret=%d\n", __func__, __LINE__, ret);
 	if (ret == -ENODEV)
 		return 0;
 	else if (ret)
@@ -130,11 +138,13 @@ int tilcdc_attach_external_device(struct drm_device *ddev)
 
 	ret = drm_simple_encoder_init(ddev, priv->external_encoder,
 				      DRM_MODE_ENCODER_NONE);
+	printk("%s,%d: ret=%d\n", __func__, __LINE__, ret);
 	if (ret) {
 		dev_err(ddev->dev, "drm_encoder_init() failed %d\n", ret);
 		return ret;
 	}
 
+	printk("%s,%d: panel=0x%p\n", __func__, __LINE__, panel);
 	if (panel) {
 		bridge = devm_drm_panel_bridge_add_typed(ddev->dev, panel,
 							 DRM_MODE_CONNECTOR_DPI);
@@ -145,9 +155,11 @@ int tilcdc_attach_external_device(struct drm_device *ddev)
 	}
 
 	ret = tilcdc_attach_bridge(ddev, bridge);
+	printk("%s,%d: ret=%d\n", __func__, __LINE__, ret);
 	if (ret)
 		goto err_encoder_cleanup;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	return 0;
 
 err_encoder_cleanup:
@@ -172,7 +184,7 @@ int tilcdc_get_external_components(struct device *dev,
 	node = of_graph_get_remote_node(dev->of_node, 0, 0);
 	printk("%s,%d: node=%pOF\n", __func__, __LINE__, node);
 	if (!of_device_is_compatible(node, "nxp,tda998x")
-		&& !of_device_is_compatible(node, "ite,it66122")) {
+		/*&& !of_device_is_compatible(node, "ite,it66122")*/) {
 		of_node_put(node);
 		return 0;
 	}

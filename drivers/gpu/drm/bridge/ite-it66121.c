@@ -22,6 +22,7 @@
 
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_bridge.h>
+#include <drm/drm_bridge_connector.h>
 #include <drm/drm_edid.h>
 #include <drm/drm_modes.h>
 #include <drm/drm_print.h>
@@ -594,13 +595,30 @@ static int it66121_bridge_attach(struct drm_bridge *bridge,
 				 enum drm_bridge_attach_flags flags)
 {
 	struct it66121_ctx *ctx = container_of(bridge, struct it66121_ctx, bridge);
+	struct drm_connector *connector;
 	int ret;
 
 	DBG("Start: flags=0x%x", flags);
-	if (!(flags & DRM_BRIDGE_ATTACH_NO_CONNECTOR))
-		return -EINVAL;
+	// if (!(flags & DRM_BRIDGE_ATTACH_NO_CONNECTOR))
+	// 	return -EINVAL;
+	// if (flags & DRM_BRIDGE_ATTACH_NO_CONNECTOR) {
+	// 	DRM_ERROR("DRM_BRIDGE_ATTACH_NO_CONNECTOR mode is not supported.\n");
+	// 	return -EINVAL;
+	// }
 
-	ret = drm_bridge_attach(bridge->encoder, ctx->next_bridge, bridge, flags);
+	connector = drm_bridge_connector_init(bridge->dev, bridge->encoder);
+	if (IS_ERR(connector)) {
+		ret = PTR_ERR(connector);
+		dev_err(ctx->dev, "failed to initialize bridge connector: %d\n",
+			ret);
+		return ret;
+	}
+	drm_connector_attach_encoder(connector, bridge->encoder);
+
+	DBG("bridge->encoder=0x%p", bridge->encoder);
+	DBG("%s,%d: next_bridge: %pOF", __func__, __LINE__, ctx->next_bridge->of_node);
+	DBG("%s,%d: bridge: %pOF", __func__, __LINE__, bridge->of_node);
+	ret = drm_bridge_attach(bridge->encoder, ctx->next_bridge, bridge, flags|DRM_BRIDGE_ATTACH_NO_CONNECTOR);
 	DBG("ret=%d", ret);
 	if (ret)
 		return ret;
@@ -735,6 +753,7 @@ static void it66121_bridge_enable(struct drm_bridge *bridge,
 {
 	struct it66121_ctx *ctx = container_of(bridge, struct it66121_ctx, bridge);
 
+	printk("%s,%d: connector=%p\n", __func__, __LINE__, ctx->connector);
 	ctx->connector = drm_atomic_get_new_connector_for_encoder(state, bridge->encoder);
 
 	it66121_set_mute(ctx, false);
@@ -777,10 +796,10 @@ void it66121_bridge_mode_set(struct drm_bridge *bridge,
 	struct it66121_ctx *ctx = container_of(bridge, struct it66121_ctx, bridge);
 	int ret;
 
+	printk("%s,%d\n", __func__, __LINE__);
 	mutex_lock(&ctx->lock);
 
-	ret = drm_hdmi_avi_infoframe_from_display_mode(&ctx->hdmi_avi_infoframe, ctx->connector,
-						       adjusted_mode);
+	ret = drm_hdmi_avi_infoframe_from_display_mode(&ctx->hdmi_avi_infoframe, ctx->connector, adjusted_mode);
 	if (ret) {
 		DRM_ERROR("Failed to setup AVI infoframe: %d\n", ret);
 		goto unlock;
